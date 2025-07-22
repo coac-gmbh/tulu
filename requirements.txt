@@ -10,7 +10,7 @@ aiohappyeyeballs==2.6.1
     # via aiohttp
 aiohttp==3.12.9
     # via
-    #   aiohttp-cors
+   #   aiohttp-cors
     #   fsspec
     #   litellm
     #   ray
@@ -159,7 +159,7 @@ filelock==3.18.0
     #   virtualenv
     #   vllm
 flake8==7.2.0
-flash-attn==2.8.0.post2
+flash-attn==1.0.5
     # via open-instruct
 fonttools==4.58.1
     # via matplotlib
@@ -369,46 +369,46 @@ numpy==1.26.4
     #   transformers
     #   vllm
     #   xformers
-nvidia-cublas-cu12==12.8.3.14 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-cublas-cu12==12.8.3.14 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via
     #   nvidia-cudnn-cu12
     #   nvidia-cusolver-cu12
     #   torch
-nvidia-cuda-cupti-cu12==12.8.57 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+# nvidia-cuda-cupti-cu12==12.8.57 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cuda-nvrtc-cu12==12.8.61 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-cuda-nvrtc-cu12==12.8.61 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cuda-runtime-cu12==12.8.57 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-cuda-runtime-cu12==12.8.57 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cudnn-cu12==9.7.1.26 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-cudnn-cu12==9.7.1.26 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cufft-cu12==11.3.3.41 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-cufft-cu12==11.3.3.41 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cufile-cu12==1.13.0.11 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-cufile-cu12==1.13.0.11 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-curand-cu12==10.3.9.55 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-curand-cu12==10.3.9.55 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cusolver-cu12==11.7.2.55 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-cusolver-cu12==11.7.2.55 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-cusparse-cu12==12.5.7.53 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-cusparse-cu12==12.5.7.53 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via
     #   nvidia-cusolver-cu12
     #   torch
-nvidia-cusparselt-cu12==0.6.3 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-cusparselt-cu12==0.6.3 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-ml-py==12.575.51
+#nvidia-ml-py==12.575.51
     # via nvitop
-nvidia-nccl-cu12==2.26.2 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-nccl-cu12==2.26.2 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvidia-nvjitlink-cu12==12.8.61 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-nvjitlink-cu12==12.8.61 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via
     #   nvidia-cufft-cu12
     #   nvidia-cusolver-cu12
     #   nvidia-cusparse-cu12
     #   torch
-nvidia-nvtx-cu12==12.8.55 ; platform_machine == 'x86_64' and sys_platform == 'linux'
+#nvidia-nvtx-cu12==12.8.55 ; platform_machine == 'x86_64' and sys_platform == 'linux'
     # via torch
-nvitop==1.5.1
+#nvitop==1.5.1
     # via open-instruct
 openai==1.84.0
     # via
@@ -751,7 +751,7 @@ torch==2.7.0 ; sys_platform == 'darwin'
     #   torchvision
     #   vllm
     #   xgrammar
-torch==2.7.0+cu128 ; sys_platform != 'darwin'
+torch==2.7.0 ; sys_platform != 'darwin'
     # via
     #   accelerate
     #   bitsandbytes
@@ -839,7 +839,7 @@ uvloop==0.21.0 ; platform_python_implementation != 'PyPy' and sys_platform != 'c
     # via uvicorn
 virtualenv==20.31.2
     # via ray
-vllm==0.9.1
+#vllm==0.5.0.post1
     # via open-instruct
 wandb==0.18.1
     # via open-instruct
@@ -859,8 +859,7 @@ wrapt==1.17.2
     # via
     #   deprecated
     #   smart-open
-xformers==0.0.30 ; platform_machine == 'x86_64' and sys_platform == 'linux'
-    # via vllm
+    # via v
 xgrammar==0.1.19 ; platform_machine == 'aarch64' or platform_machine == 'x86_64'
     # via vllm
 xxhash==3.5.0

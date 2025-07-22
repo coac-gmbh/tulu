@@ -29,6 +29,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from utils import maybe_use_ai2_hf_entity, retry_on_exception
 
+hf_token = "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"
+
 
 def dequantize_model(model, dtype=torch.bfloat16, device="cuda"):
     """
@@ -127,6 +129,7 @@ if __name__ == "__main__":
             torch_dtype=torch.bfloat16,
             quantization_config=quantization_config,
             device_map={"": 0} if torch.cuda.is_available() else None,
+            #hf_token=hf_token,
         )
         # base_model = dequantize_model(base_model, device=base_model.device)
         base_model = dequantize_model(base_model, device="cpu")
@@ -134,6 +137,7 @@ if __name__ == "__main__":
         base_model = AutoModelForCausalLM.from_pretrained(
             args.base_model_name_or_path if args.base_model_name_or_path else peft_config.base_model_name_or_path,
             torch_dtype=torch.bfloat16,
+            #hf_token=hf_token,
         )
 
     # If tokenizer is specified, use it.
@@ -161,6 +165,8 @@ if __name__ == "__main__":
             base_model.resize_token_embeddings(len(tokenizer), pad_to_multiple_of=args.pad_to_multiple_of)
         else:
             base_model.resize_token_embeddings(len(tokenizer))
+    
+    base_model.resize_token_embeddings(128264)
 
     print("Loading the lora model...")
     lora_model = PeftModel.from_pretrained(base_model, args.lora_model_name_or_path)

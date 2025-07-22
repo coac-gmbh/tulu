@@ -29,9 +29,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from utils import maybe_use_ai2_hf_entity, retry_on_exception
 
-hf_token = "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"
-
-
 def dequantize_model(model, dtype=torch.bfloat16, device="cuda"):
     """
     'model': the peftmodel you loaded with qlora.

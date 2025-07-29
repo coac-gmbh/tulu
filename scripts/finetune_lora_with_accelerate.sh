@@ -1,11 +1,17 @@
-export CUDA_VISIBLE_DEVICES=0,1
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --model_path) MODEL_PATH="$2"; shift ;;
+        --output_path) OUTPUT_PATH="$2"; shift ;;
+        --data_path) DATA_PATH="$2"; shift ;;
+        --num_gpus) NUM_GPUS="$2"; shift ;;
+        --batch_size_per_gpu) BATCH_SIZE_PER_GPU="$2"; shift ;;
+        --total_batch_size) TOTAL_BATCH_SIZE="$2"; shift ;;
+        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+    esac
+    shift
+done
 
-MODEL_PATH=/home/projects2/.cache/huggingface/hub/models--meta-llama--Llama-3.2-1B-Instruct/snapshots/9213176726f574b556790deb65791e0c5aa438b6
-OUTPUT_PATH=/home/projects2/dagr/models/llama3-freiraum
-DATA_PATH=/home/dagr/general-extraction/llama_finetune/data/freiraum
-NUM_GPUS=2
-BATCH_SIZE_PER_GPU=1
-TOTAL_BATCH_SIZE=128
 GRADIENT_ACC_STEPS=$(($TOTAL_BATCH_SIZE/$NUM_GPUS/$BATCH_SIZE_PER_GPU))
 echo "Training llama model ${MODEL_SIZE} using $NUM_GPUS GPUs, $BATCH_SIZE_PER_GPU batch size per GPU, $GRADIENT_ACC_STEPS gradient accumulation steps"
 

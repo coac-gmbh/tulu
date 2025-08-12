@@ -1,0 +1,31 @@
+FlatArguments:
+  model_name_or_path: "meta-llama/Llama-3.2-1b-Instruct"
+  tokenizer_name: "meta-llama/Llama-3.2-1b-Instruct"
+  output_dir: "./coac/output/llama2-dpo-pharma"
+  dataset_mixer_list:
+  - "./coac/data/pharma_dpo.jsonl"
+  dataset_mixer:
+    "./coac/data/pharma_dpo.jsonl": 1.0
+
+  dataset_transform_fn:
+    - "preference_tulu_tokenize_and_truncate_v1"
+    - "preference_tulu_filter_v1"
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 8
+  learning_rate: 5e-6
+  num_train_epochs: 3
+  max_seq_length: 2048
+  dpo_loss_type: "dpo"
+  dpo_beta: 0.1
+  use_lora: true
+  lora_rank: 64
+  lora_alpha: 16
+  lora_dropout: 0.05
+  with_tracking: false
+  push_to_hub: false
+  report_to: "none"
+  use_flash_attn: true
+  gradient_checkpointing: true
+
+TokenizerConfig:
+  trust_remote_code: false

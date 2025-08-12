@@ -53,12 +53,13 @@ from accelerate.accelerator import GradientAccumulationPlugin
 from accelerate.logging import get_logger
 from accelerate.utils import InitProcessGroupKwargs, set_seed
 from huggingface_hub import HfApi
-from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training
+from peft import LoraConfig, TaskType, get_peft_model, prepare_model_for_kbit_training, PeftModel
 from rich.pretty import pprint
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import AutoConfig, AutoModelForCausalLM, BitsAndBytesConfig, get_scheduler
 from transformers.training_args import _convert_str_dict
+from pathlib import Path
 
 from open_instruct.dataset_transformation import (
     CHOSEN_INPUT_IDS_KEY,
@@ -239,6 +240,10 @@ class FlatArguments:
             "choices": ["linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"],
         },
     )
+    merge_lora: bool = field(
+        default=False,
+        metadata={"help": "If True, merge LoRA weights into base model and save the merged model."}
+    )
     num_train_epochs: int = field(default=2, metadata={"help": "Total number of training epochs to perform."})
     output_dir: str = field(
         default="output/",
@@ -326,7 +331,7 @@ class FlatArguments:
     """The wandb's project name"""
     wandb_entity: Optional[str] = None
     """The entity (team) of wandb's project"""
-    push_to_hub: bool = True
+    push_to_hub: bool = False
     """Whether to upload the saved model to huggingface"""
     hf_entity: Optional[str] = None
     """The user or org name of the model repository from the Hugging Face Hub"""
@@ -336,7 +341,7 @@ class FlatArguments:
     """The revision of the saved model in the Hugging Face Hub (can be autoset if not given)"""
     hf_repo_url: Optional[str] = None
     """The url of the saved model in the Hugging Face Hub (will be autoset)"""
-    try_launch_beaker_eval_jobs: bool = True
+    try_launch_beaker_eval_jobs: bool = False
     """Whether to launch beaker evaluation jobs after training"""
     hf_metadata_dataset: Optional[str] = "allenai/tulu-3-evals"
     """What dataset to upload the metadata to. If unset, don't upload metadata"""
@@ -423,6 +428,97 @@ def get_cache_ref_logprobs(
         epoch_cached_reference_chosen_logps.append(cached_reference_chosen_logps)
         epoch_cached_reference_rejected_logps.append(cached_reference_rejected_logps)
     return epoch_cached_reference_chosen_logps, epoch_cached_reference_rejected_logps
+
+
+TARGET_VOCAB = 128_264
+PAD_TO_MULTIPLE_OF = 8
+
+def merge_and_save_lora_model(
+    accelerator,
+    model,
+    tokenizer,
+    output_dir,
+    hf_repo_id=None,
+    hf_repo_revision=None,
+    target_vocab: int = TARGET_VOCAB,
+    pad_to_multiple_of: int = PAD_TO_MULTIPLE_OF,
+):
+    """
+    Merge LoRA weights into the base model and save the merged model.
+    - Ensures tokenizer.pad_token is set (defaults to eos_token if missing).
+    - Optionally resizes token embeddings to target_vocab before merging.
+    - Merges LoRA weights into the base model (merge_and_unload).
+    - Saves the merged model and tokenizer locally and optionally pushes to the Hub.
+    """
+    logger.info("Merging LoRA weights into base model...")
+
+    # Ensure tokenizer has a pad_token; if missing, fall back to eos_token
+    if getattr(tokenizer, "pad_token", None) is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        logger.info("Tokenizer pad_token was None; set pad_token = eos_token.")
+
+    # Unwrap the model from the accelerator if needed
+    unwrapped_model = accelerator.unwrap_model(model)
+
+    # Optional: resize embeddings before merging
+    try:
+        current_vocab = unwrapped_model.get_input_embeddings().weight.shape[0]
+    except Exception:
+        current_vocab = None
+
+    if target_vocab and isinstance(target_vocab, int):
+        if (current_vocab is None) or (target_vocab != current_vocab):
+            logger.info(
+                f"Resizing token embeddings from {current_vocab} to {target_vocab} "
+                f"(pad_to_multiple_of={pad_to_multiple_of})."
+            )
+            unwrapped_model.resize_token_embeddings(target_vocab, pad_to_multiple_of=pad_to_multiple_of)
+
+    # Optional sanity logging of embedding shapes
+    try:
+        in_shape = tuple(unwrapped_model.get_input_embeddings().weight.shape)
+        logger.info(f"Input embedding shape: {in_shape}")
+        lm_head = unwrapped_model.get_output_embeddings()
+        if lm_head is not None:
+            out_shape = tuple(lm_head.weight.shape)
+            logger.info(f"LM head shape: {out_shape}")
+    except Exception as e:
+        logger.warning(f"Could not log embedding shapes: {e}")
+
+    # Merge LoRA weights into the base model
+    if hasattr(unwrapped_model, "merge_and_unload"):
+        merged_model = unwrapped_model.merge_and_unload()
+    else:
+        # If model is a PeftModel instance, call merge_and_unload directly
+        if isinstance(unwrapped_model, PeftModel):
+            merged_model = unwrapped_model.merge_and_unload()
+        else:
+            raise RuntimeError(
+                "Model does not support merge_and_unload(). "
+                "Ensure you are passing a PEFT-wrapped model with LoRA adapters."
+            )
+
+    # Create the output directory
+    merged_output_dir = os.path.join(output_dir, "merged_model")
+    Path(merged_output_dir).mkdir(parents=True, exist_ok=True)
+
+    # Save only on the main process
+    if accelerator.is_main_process:
+        logger.info(f"Saving merged model to {merged_output_dir}")
+        merged_model.save_pretrained(merged_output_dir)
+        tokenizer.save_pretrained(merged_output_dir)
+        logger.info("Successfully saved merged model and tokenizer.")
+
+        # Optional: push to the Hub
+        if hf_repo_id and hf_repo_revision:
+            try:
+                merged_repo_id = f"{hf_repo_id}-merged"
+                push_folder_to_hub(accelerator, merged_output_dir, merged_repo_id, hf_repo_revision)
+                logger.info(f"Merged model pushed to hub: {merged_repo_id}")
+            except Exception as e:
+                logger.exception(f"Failed to push merged model to hub: {e}")
+
+    return merged_model, merged_output_dir
 
 
 def main(args: FlatArguments, tc: TokenizerConfig):
@@ -988,7 +1084,18 @@ def main(args: FlatArguments, tc: TokenizerConfig):
             accelerator.wait_for_everyone()
 
     if args.output_dir is not None:
-        save_with_accelerate(accelerator, model, tokenizer, args.output_dir, args.use_lora, tc.chat_template_name)
+        save_with_accelerate(accelerator, model, tokenizer, args.output_dir, args.use_lora, None)
+
+    if args.use_lora and args.merge_lora:
+        model, merged_output_dir = merge_and_save_lora_model(
+            accelerator, 
+            model, 
+            tokenizer, 
+            args.output_dir,
+            args.hf_repo_id if args.push_to_hub else None,
+            args.hf_repo_revision if args.push_to_hub else None
+        )
+        logger.info(f"LoRA model successfully merged and saved to {merged_output_dir}")
 
     # remove all checkpoints to save space
     if accelerator.is_local_main_process:
@@ -1023,7 +1130,7 @@ def print_gpu_stats(init_gpu_memory: Optional[int]):
     if torch.cuda.is_available():
         free_gpu_memory, total_gpu_memory = torch.cuda.mem_get_info()
         peak_memory = init_gpu_memory - free_gpu_memory
-        print(f"Peak memory usage: {peak_memory / 1024**3:.2f} GB")
+        print(f"Peak memory usage: {peak_memory / 1024**3:.2f} if args.output_dir is not None: GB")
         print(f"Total memory usage: {total_gpu_memory / 1024**3:.2f} GB")
         print(f"Free memory: {free_gpu_memory / 1024**3:.2f} GB")
 

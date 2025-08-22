@@ -3,7 +3,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 def main():
     # === Konfiguration ===
-    model_dir = "/home/ving/tulu/open_instruct/coac/output_merged_lora"
+    model_dir = "meta-llama/Llama-3.2-1B-Instruct"
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # === Modell und Tokenizer laden ===

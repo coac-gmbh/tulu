@@ -1234,6 +1234,35 @@ def preference_tulu_tokenize_and_truncate_v1_2(
         REJECTED_ATTENTION_MASK_KEY: rejected_encoded["attention_mask"],
     }
 
+def preference_messages_format_tokenize(
+    row: Dict[str, Any],
+    tokenizer: PreTrainedTokenizer,
+    max_seq_length: int,
+    chosen_key: str = DEFAULT_CHOSEN_KEY,
+    rejected_key: str = DEFAULT_REJECTED_KEY
+):
+    """
+    For format: {"messages": [...], "chosen": "...", "rejected": "..."}
+    """
+    prompt_messages = row["messages"]
+    chosen_messages = prompt_messages + [{"role": "assistant", "content": row[chosen_key]}]
+    rejected_messages = prompt_messages + [{"role": "assistant", "content": row[rejected_key]}]
+    
+    chosen_encoded = last_turn_tulu_tokenize_and_truncate_v1(
+        {"messages": chosen_messages}, tokenizer, max_seq_length
+    )
+    rejected_encoded = last_turn_tulu_tokenize_and_truncate_v1(
+        {"messages": rejected_messages}, tokenizer, max_seq_length
+    )
+
+    return {
+        CHOSEN_INPUT_IDS_KEY: chosen_encoded["input_ids"],
+        CHOSEN_LABELS_KEY: chosen_encoded["labels"],
+        CHOSEN_ATTENTION_MASK_KEY: chosen_encoded["attention_mask"],
+        REJECTED_INPUT_IDS_KEY: rejected_encoded["input_ids"],
+        REJECTED_LABELS_KEY: rejected_encoded["labels"],
+        REJECTED_ATTENTION_MASK_KEY: rejected_encoded["attention_mask"],
+    }
 
 def preference_tulu_filter_v1(row: Dict[str, Any], tokenizer: PreTrainedTokenizer):
     return any(x != -100 for x in row[CHOSEN_LABELS_KEY]) and any(x != -100 for x in row[REJECTED_LABELS_KEY])
@@ -1327,6 +1356,7 @@ TRANSFORM_FNS = {
     "preference_tulu_filter_v1": (preference_tulu_filter_v1, "filter"),
     "rlvr_tokenize_v1": (rlvr_tokenize_v2, "map"),
     "rlvr_filter_v1": (rlvr_filter_v1, "filter"),
+    "preference_messages_format_tokenize": (preference_messages_format_tokenize, "map"),
 }
 
 
